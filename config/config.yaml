@@ -1,13 +1,10 @@
+kraken:
+  api_key: "QOWEk3t1QbcA1IobiPvxP27GWeP9EhH9VK08za6tb/Eh+WOXOLz4nqOg"
+  secret_key: "O9zTROl6AgZZ50kMHOO5dvL+4ZYU0VUQ5rkNCUbN/HyU+mSYs1lKQS0r4G/9LMAYLyI+fguA2MtLPupPdGu3IA=="
+
 alpaca:
-  api_key: YOUR_ALPACA_API_KEY
-  secret_key: YOUR_ALPACA_SECRET_KEY
-
-polygon:
-  api_key: YOUR_POLYGON_API_KEY
-
-binance:
-  api_key: YOUR_BINANCE_API_KEY
-  secret_key: YOUR_BINANCE_SECRET_KEY
+  api_key: "AKRJ1G5I3Q011WOFOAQP"
+  secret_key: "f1S8lLpTDNBalnBAhVFTe7DirjI2rgP14wSsaP0v"
 
 web3:
-  infura_url: YOUR_INFURA_URL
+  infura_url: "https://mainnet.infura.io/v3/aa2aabae9e7b469e9bd818a1dcf53489"

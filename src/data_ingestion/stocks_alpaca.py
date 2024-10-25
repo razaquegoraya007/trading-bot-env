@@ -28,6 +28,7 @@ def fetch_stock_data(symbol, start_date, end_date):
     bars.to_csv(f"data/stocks/{symbol}_data.csv")
     print(f"Data for {symbol} saved!")
 
+
 # Example usage
 if __name__ == '__main__':
     fetch_stock_data('AAPL', '2022-01-01', '2023-01-01')

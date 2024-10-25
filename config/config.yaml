@@ -1,0 +1,13 @@
+alpaca:
+  api_key: YOUR_ALPACA_API_KEY
+  secret_key: YOUR_ALPACA_SECRET_KEY
+
+polygon:
+  api_key: YOUR_POLYGON_API_KEY
+
+binance:
+  api_key: YOUR_BINANCE_API_KEY
+  secret_key: YOUR_BINANCE_SECRET_KEY
+
+web3:
+  infura_url: YOUR_INFURA_URL

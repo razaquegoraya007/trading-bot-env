@@ -4,7 +4,7 @@ class MeanReversionStrategy(bt.Strategy):
 
     def __init__(self):
         self.sma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.params.sma_period)
-        self.buy_price = None  #Buy Price initialy set to None
+        self.buy_price = None
 
     def next(self):
         if self.position:  # If the strategy is holding a position (i.e., already bought)

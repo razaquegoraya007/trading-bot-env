@@ -8,3 +8,14 @@ alpaca:
 
 web3:
   infura_url: "https://mainnet.infura.io/v3/aa2aabae9e7b469e9bd818a1dcf53489"
+
+newsapi:
+  api_key: "2874b5173c07455ba4215a71b8f84b6f"
+
+twitter:
+  api_key: "lm6rEfOlyFPutHWgZdcmtdQmj"
+  api_secret: "tKmhnff16IuaoruvBIpgHHwcW1bWQL3ZphqzpZ4oCoafgMS83V"
+  access_token: "1850101773383417856-u7q8gjPM2btUbjs1SH2FVWVcIjolnj"
+  access_token_secret: "KekLvxGFJTVVcRTVdXM0y67FZCCIml7V7rJJAxaWAl6jE"
+
+

@@ -31,6 +31,7 @@ def fetch_crypto_data(symbol):
         df.to_csv(f"data/crypto/{symbol.replace('/', '_')}_data.csv", index=False)
         print(f"Crypto data for {symbol} saved to data/crypto/")
 
+
     except Exception as e:
         print(f"Error fetching data for {symbol}: {e}")
 

@@ -38,7 +38,6 @@ btc_data = pd.read_csv('data/crypto/BTC_USD_data.csv', parse_dates=['timestamp '
 btc_data.columns = btc_data.columns.str.strip()  # Strip extra spaces
 btc_data.set_index('timestamp', inplace=True)
 
-# Load AAPL data and clean the column names
 aapl_data = pd.read_csv('data/stocks/AAPL_data.csv', parse_dates=['timestamp                '])
 aapl_data.columns = aapl_data.columns.str.strip()  # Strip extra spaces
 aapl_data.set_index('timestamp', inplace=True)

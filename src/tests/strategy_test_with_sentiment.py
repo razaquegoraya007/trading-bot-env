@@ -79,8 +79,11 @@ sentiment_data = pd.read_csv('data/sentiment/BTC_sentiment.csv', parse_dates=['d
 sentiment_data.columns = sentiment_data.columns.str.strip()
 sentiment_data['date'] = pd.to_datetime(sentiment_data['date'])
 
+
 merged_data = pd.merge(btc_data, sentiment_data, on='date', how='left')
 merged_data = merged_data.assign(sentiment=merged_data['sentiment'].fillna(0))
+
+# Run the backtest with the SentimentStrategy
 
 merged_data.set_index('timestamp', inplace=True)
 

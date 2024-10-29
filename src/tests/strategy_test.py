@@ -47,4 +47,3 @@ run_backtest(MeanReversionStrategy, btc_data, "BTC/USD - Mean Reversion")
 run_backtest(MomentumStrategy, btc_data, "BTC/USD - Momentum")
 run_backtest(MeanReversionStrategy, aapl_data, "AAPL - Mean Reversion")
 run_backtest(MomentumStrategy, aapl_data, "AAPL - Momentum")
-

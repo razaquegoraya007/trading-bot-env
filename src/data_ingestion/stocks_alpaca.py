@@ -25,6 +25,13 @@ def fetch_stock_data(symbol, start_date, end_date):
     bars = api.get_bars(symbol, TimeFrame.Day, start=start_date, end=end_date).df
 
 
+
+
+
+
+
+
+
     # Save the data
     bars.to_csv(f"data/stocks/{symbol}_data.csv")
     print(f"Data for {symbol} saved!")

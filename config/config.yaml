@@ -8,6 +8,8 @@ alpaca:
 
 web3:
   infura_url: "https://mainnet.infura.io/v3/aa2aabae9e7b469e9bd818a1dcf53489"
+  private_key: "84a010e28c03ccd716cf78249ddaf24a16c1cb801f65d9e1780db206fc621c3c"
+  wallet_address: "0x7563632939CE703Fec6EFd6255C8455848e00163"
 
 newsapi:
   api_key: "2874b5173c07455ba4215a71b8f84b6f"
@@ -18,4 +20,28 @@ twitter:
   access_token: "1850101773383417856-u7q8gjPM2btUbjs1SH2FVWVcIjolnj"
   access_token_secret: "KekLvxGFJTVVcRTVdXM0y67FZCCIml7V7rJJAxaWAl6jE"
 
+zerion:
+  api_key: "zk_dev_c488c4c013b246f3b3bb4c2d02009380"
+
+web3auth:
+  client_id: "BGzuUmXbSPua1OyZvilx1N4CvflKe6axPLafkdhEedncLI0AKEy01fZ87dxWMYisrlYscZ4sAHcHz3j0I5r0uw0"
+  client_secret: "9ee4708d043ff378063bcc6b58b6c82ae133d6f87f02032c44f1b008edd7ef6e"
+
+oneinch:
+  api_key: "mE2ipjeMbeTDTpCzx7tsmglv1VZHqd39"
+
+aave:
+  contract_address: "0x7d2768dE32b0b80b7a3454c06Bdac1988Cef628b"
+  abi_path: "abi/aave_abi.json"
+
+
+compound:
+  contract_address: "0x3d9819210A31b4961b30EF54bE2AeD79B9c9Cd3B"
+  abi_path: "abi/compound_abi.json"
+
+reddit:
+  client_id: "rRxEHUpRf7r4vDqooKfRhw"
+  client_secret: "hyPlj1RLnWqqL_gWnIgwzn3A1H67aw"
+  user_agent: "Noir"
+  redirect_uri: "http://localhost"
 

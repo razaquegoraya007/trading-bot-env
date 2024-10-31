@@ -2,13 +2,12 @@ import requests
 from textblob import TextBlob
 import yaml
 
-# Load News API key from config file
 with open('config/config.yaml') as f:
     config = yaml.safe_load(f)
 
 api_key = config['newsapi']['api_key']
 
-# Function to fetch and analyze sentiment from news articles
+
 def fetch_news_sentiment(keyword, article_limit=10):
     url = f"https://newsapi.org/v2/everything?q={keyword}&language=en&apiKey={api_key}"
     response = requests.get(url)
@@ -28,13 +27,12 @@ def fetch_news_sentiment(keyword, article_limit=10):
     for article in articles[:article_limit]:
         title = article.get('title', '')
         description = article.get('description', '')
-        full_text = f"{title} {description}"  # Combine title and description for analysis
+        full_text = f"{title} {description}"
         analysis = TextBlob(full_text)
         sentiment = analysis.sentiment.polarity
         sentiments.append(sentiment)
         print(f"Article Title: {title}\nSentiment Score: {sentiment}\n")
 
-    # Calculate average sentiment
     avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0
     print(f"\nAverage Sentiment for '{keyword}' in News: {avg_sentiment}")
     return avg_sentiment

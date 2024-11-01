@@ -1,8 +1,9 @@
 import requests
 
-# Set lower thresholds for testing
-MIN_TVL = 1000     # Minimum Total Value Locked (TVL) in USD
-MIN_APY = 1        # Minimum APY in %
+# Set the lower thresholds for testing
+MIN_TVL = 1000
+MIN_APY = 2
+MemoryError
 
 def fetch_defi_data():
     url = "https://api.llama.fi/protocols"
@@ -58,3 +59,4 @@ def fetch_defi_data():
 
 if __name__ == "__main__":
     fetch_defi_data()
+

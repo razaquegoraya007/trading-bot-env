@@ -29,7 +29,7 @@ class SentimentStrategy(bt.Strategy):
     params = dict(
         sentiment_threshold=0.1,
         take_profit=0.05,
-        stop_loss=0.02
+        stop_loss=0.02,
     )
 
     def __init__(self):
@@ -60,7 +60,6 @@ class SentimentStrategy(bt.Strategy):
                 self.sell()
                 print(f"Selling at {self.dataclose[0]} with sentiment {self.sentiment[0]}")
 
-# Fetch Reddit sentiment
 def fetch_reddit_sentiment(subreddit_name="CryptoCurrency", post_limit=10):
     subreddit = reddit.subreddit(subreddit_name)
     posts = subreddit.hot(limit=post_limit)
@@ -92,7 +91,8 @@ def run_backtest_with_sentiment(strategy, data_df, name=""):
     final_value = cerebro.broker.getvalue()
     print(f"Final Portfolio Value for {name} ({strategy.__name__}): ${final_value:.2f}")
 
-# Load BTC/USD data and sentiment data
+
+
 btc_data = pd.read_csv('data/crypto/BTC_USD_data.csv', parse_dates=['timestamp '])
 btc_data.columns = btc_data.columns.str.strip()
 btc_data['date'] = pd.to_datetime(btc_data['timestamp']).dt.date
@@ -104,7 +104,6 @@ sentiment_data['date'] = pd.to_datetime(sentiment_data['date']).dt.date
 merged_data = pd.merge(btc_data, sentiment_data, on='date', how='left')
 merged_data = merged_data.assign(sentiment=merged_data['sentiment'].fillna(0))
 
-merged_data.set_index('timestamp', inplace=True)
 
-# Run backtest
+merged_data.set_index('timestamp', inplace=True)
 run_backtest_with_sentiment(SentimentStrategy, merged_data, "BTC/USD - Sentiment Enhanced")

@@ -20,8 +20,10 @@ def fetch_reddit_sentiment(subreddit_name, limit=10):
 
     for submission in subreddit.hot(limit=limit):
         analysis = TextBlob(submission.title)
+        # analysis.save()
         sentiment_score = analysis.sentiment.polarity
         sentiments.append(sentiment_score)
+
         print(f"Title: {submission.title}\nSentiment Score: {sentiment_score}\n")
 
     avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0

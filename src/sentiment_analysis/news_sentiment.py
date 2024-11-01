@@ -7,7 +7,6 @@ with open('config/config.yaml') as f:
 
 api_key = config['newsapi']['api_key']
 
-
 def fetch_news_sentiment(keyword, article_limit=10):
     url = f"https://newsapi.org/v2/everything?q={keyword}&language=en&apiKey={api_key}"
     response = requests.get(url)

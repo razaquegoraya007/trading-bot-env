@@ -11,6 +11,7 @@ web3:
   private_key: "84a010e28c03ccd716cf78249ddaf24a16c1cb801f65d9e1780db206fc621c3c"
   wallet_address: "0x7563632939CE703Fec6EFd6255C8455848e00163"
 
+#it is my account's api
 newsapi:
   api_key: "2874b5173c07455ba4215a71b8f84b6f"
 

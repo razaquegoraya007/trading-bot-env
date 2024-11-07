@@ -53,6 +53,8 @@ class EnhancedStrategy(bt.Strategy):
                 self.order = self.buy()
                 self.trade_log.append(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
+
+
         else:
             # Dynamic stop-loss and take-profit based on ATR
             stop_loss_price = self.buy_price - (self.params.atr_multiplier * self.atr[0])
@@ -67,6 +69,7 @@ class EnhancedStrategy(bt.Strategy):
 
             elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper:
                 self.order = self.sell()
+
                 self.trade_log.append(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.buy_price = None
@@ -77,6 +80,7 @@ class EnhancedStrategy(bt.Strategy):
             self.order = self.sell()
             self.trade_log.append(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
             self.log(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
+
 
 # Function to load CSV data
 def load_data(filepath, date_column='timestamp'):
@@ -101,7 +105,7 @@ def load_data(filepath, date_column='timestamp'):
         return data[['open', 'high', 'low', 'close', 'volume']]
     except ValueError as e:
         print(f"Error: {e}")
-        print(f"Available columns in {filepath}: {pd.read_csv(filepath, sep=';', engine='python').columns}")
+        print(f"Available columnsi n {filepath}: {pd.read_csv(filepath, sep=';',engine='python').columns}")
         return None
 
 # Function to run backtests
@@ -133,6 +137,7 @@ def run_backtest_with_metrics(data, condition_name):
 
     win_rate = (won_trades / total_closed) * 100 if total_closed > 0 else 0
     profit_factor = (pnl_won / abs(pnl_lost)) if pnl_lost != 0 else float('inf')
+
 
     print(f"\nTrade Log:")
     for entry in results[0].trade_log:

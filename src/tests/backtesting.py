@@ -54,7 +54,6 @@ class EnhancedStrategy(bt.Strategy):
                 self.trade_log.append(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
 
-
         else:
             # Dynamic stop-loss and take-profit based on ATR
             stop_loss_price = self.buy_price - (self.params.atr_multiplier * self.atr[0])

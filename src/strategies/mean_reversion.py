@@ -47,3 +47,4 @@ class MeanReversionStrategy(bt.Strategy):
             elif self.dataclose[0] >= take_profit_price:
                 self.order = self.sell()
                 print(f"Take Profit hit. Selling at {self.dataclose[0]}")
+

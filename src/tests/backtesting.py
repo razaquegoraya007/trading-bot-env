@@ -1,12 +1,14 @@
-# src/tests/backtesting.py
-
 import backtrader as bt
 import pandas as pd
 import sys
 import os
 
-# Add the root project directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+# Import the sentiment analysis function
+from src.utils.sentiment_analysis import get_overall_sentiment
+
 
 class CustomPandasData(bt.feeds.PandasData):
     params = (
@@ -21,10 +23,11 @@ class CustomPandasData(bt.feeds.PandasData):
 class EnhancedStrategy(bt.Strategy):
     params = dict(
         rsi_period=14,
-        rsi_upper=55,              # Lowered threshold to trigger more sells
-        rsi_lower=45,              # Raised threshold to trigger more buys
+        rsi_upper=70,  # Adjusted threshold to be more selective
+        rsi_lower=30,  # Adjusted threshold to be more selective
         atr_period=14,
-        atr_multiplier=0.5,        # Reduced multiplier for smaller stop-loss/take-profit
+        atr_multiplier=1.0,  # Adjusted for better stop-loss/take-profit levels
+        sentiment_threshold=-0.2  # New parameter for sentiment filtering
     )
 
     def __init__(self):
@@ -35,8 +38,12 @@ class EnhancedStrategy(bt.Strategy):
         self.atr = bt.indicators.AverageTrueRange(self.data, period=self.params.atr_period)
         self.trade_log = []
 
+        # Fetch overall sentiment score
+        self.overall_sentiment = get_overall_sentiment()
+        print(f"Initial Overall Sentiment Score: {self.overall_sentiment}")
+
     def log(self, text):
-        """ Logging function for this strategy"""
+        """ Logging function for this strategy """
         print(f'{self.data.datetime.date(0)}: {text}')
 
     def next(self):
@@ -47,13 +54,12 @@ class EnhancedStrategy(bt.Strategy):
             return  # Skip if there's a pending order
 
         if not self.position:
-            # Buy condition: RSI below lower threshold or price drop from previous close
-            if self.rsi[0] < self.params.rsi_lower or (self.dataclose[0] < self.dataclose[-1] * 0.99):
+            # Buy condition: RSI below lower threshold and sentiment score is positive
+            if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold:
                 self.buy_price = self.dataclose[0]
                 self.order = self.buy()
                 self.trade_log.append(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
-
         else:
             # Dynamic stop-loss and take-profit based on ATR
             stop_loss_price = self.buy_price - (self.params.atr_multiplier * self.atr[0])
@@ -68,7 +74,6 @@ class EnhancedStrategy(bt.Strategy):
 
             elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper:
                 self.order = self.sell()
-
                 self.trade_log.append(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.buy_price = None
@@ -79,7 +84,6 @@ class EnhancedStrategy(bt.Strategy):
             self.order = self.sell()
             self.trade_log.append(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
             self.log(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
-
 
 # Function to load CSV data
 def load_data(filepath, date_column='timestamp'):
@@ -104,7 +108,7 @@ def load_data(filepath, date_column='timestamp'):
         return data[['open', 'high', 'low', 'close', 'volume']]
     except ValueError as e:
         print(f"Error: {e}")
-        print(f"Available columnsi n {filepath}: {pd.read_csv(filepath, sep=';',engine='python').columns}")
+        print(f"Available columns in {filepath}: {pd.read_csv(filepath, sep=';', engine='python').columns}")
         return None
 
 # Function to run backtests
@@ -136,7 +140,6 @@ def run_backtest_with_metrics(data, condition_name):
 
     win_rate = (won_trades / total_closed) * 100 if total_closed > 0 else 0
     profit_factor = (pnl_won / abs(pnl_lost)) if pnl_lost != 0 else float('inf')
-
 
     print(f"\nTrade Log:")
     for entry in results[0].trade_log:

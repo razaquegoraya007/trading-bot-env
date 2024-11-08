@@ -2,13 +2,13 @@ import backtrader as bt
 import pandas as pd
 import sys
 import os
+import matplotlib.pyplot as plt
 
-
+# Add the root project directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 # Import the sentiment analysis function
 from src.utils.sentiment_analysis import get_overall_sentiment
-
 
 class CustomPandasData(bt.feeds.PandasData):
     params = (
@@ -23,8 +23,8 @@ class CustomPandasData(bt.feeds.PandasData):
 class EnhancedStrategy(bt.Strategy):
     params = dict(
         rsi_period=14,
-        rsi_upper=70,  # Adjusted threshold to be more selective
-        rsi_lower=30,  # Adjusted threshold to be more selective
+        rsi_upper=70,  # Adjusted to be more selective
+        rsi_lower=30,  # Adjusted to be more selective
         atr_period=14,
         atr_multiplier=1.0,  # Adjusted for better stop-loss/take-profit levels
         sentiment_threshold=-0.2  # New parameter for sentiment filtering
@@ -47,14 +47,14 @@ class EnhancedStrategy(bt.Strategy):
         print(f'{self.data.datetime.date(0)}: {text}')
 
     def next(self):
-        # Log the RSI and Close price for each bar
+        # Log RSI and Close price for each bar
         self.log(f'RSI: {self.rsi[0]}, Close: {self.dataclose[0]}')
 
         if self.order:
             return  # Skip if there's a pending order
 
         if not self.position:
-            # Buy condition: RSI below lower threshold and sentiment score is positive
+            # Buy condition: RSI below lower threshold and positive sentiment score
             if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold:
                 self.buy_price = self.dataclose[0]
                 self.order = self.buy()
@@ -112,7 +112,7 @@ def load_data(filepath, date_column='timestamp'):
         return None
 
 # Function to run backtests
-def run_backtest_with_metrics(data, condition_name):
+def run_backtest_with_metrics(data, condition_name, figure_number):
     cerebro = bt.Cerebro()
     cerebro.addstrategy(EnhancedStrategy)
     data_feed = CustomPandasData(dataname=data)
@@ -150,7 +150,9 @@ def run_backtest_with_metrics(data, condition_name):
     print("Max Drawdown:", drawdown)
     print("Win Rate: {:.2f}%".format(win_rate))
     print("Profit Factor:", profit_factor)
-    cerebro.plot()
+
+    # Save the plot for the market condition
+    cerebro.plot(figure=figure_number)
 
 # Market conditions
 market_conditions = {
@@ -159,10 +161,16 @@ market_conditions = {
     'Sideways Market': 'data/sideways_market.csv'
 }
 
-# Run backtests for each market condition
-for condition_name, file_path in market_conditions.items():
+# Create a figure for plotting
+plt.figure(figsize=(15, 10))
+
+# Run backtests for each market condition and plot on the same figure
+for i, (condition_name, file_path) in enumerate(market_conditions.items(), start=1):
     market_data = load_data(file_path)
     if market_data is not None:
-        run_backtest_with_metrics(market_data, condition_name)
+        run_backtest_with_metrics(market_data, condition_name, figure_number=i)
     else:
         print(f"Failed to load data for {condition_name}.")
+
+# Show all plots together
+plt.show()

@@ -2,7 +2,17 @@ import tweepy
 import praw
 from transformers import pipeline
 import requests
-from config import config
+# from config import config
+
+import yaml
+import os
+
+# Load configuration from config.yaml
+config_path = os.path.join(os.path.dirname(__file__), '../../config/config.yaml')
+
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file)
+
 
 # Twitter API Setup
 def setup_twitter_api():

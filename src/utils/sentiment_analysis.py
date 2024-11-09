@@ -35,7 +35,9 @@ def fetch_news_sentiment():
         if response.status_code == 200:
             articles = response.json().get("articles", [])
             logging.debug(f"Fetched {len(articles)} articles from News API.")
-            sentiments = [sentiment_pipeline(article["title"])[0] for article in articles if article.get("title")]
+            sentiments = [
+                sentiment_pipeline(article["title"])[0] for article in articles if article.get("title")
+            ]
             return sentiments
         else:
             logging.error(f"Error fetching news data: {response.status_code}")
@@ -45,7 +47,13 @@ def fetch_news_sentiment():
         return []
 
 # Hugging Face Sentiment Analysis
-sentiment_pipeline = pipeline("sentiment-analysis", device=-1)  # Use CPU (-1) or GPU (0) if available
+# Use device=0 for GPU (if available), otherwise device=-1 for CPU
+sentiment_pipeline = pipeline(
+    "sentiment-analysis",
+    model="distilbert-base-uncased-finetuned-sst-2-english",
+    revision="714eb0f",
+    device=0  # Change to 0 to use the GPU
+)
 
 # Analyze Reddit Sentiment
 def analyze_reddit_sentiment(reddit, subreddit_name, limit=100):

@@ -2,51 +2,19 @@ import backtrader as bt
 import pandas as pd
 import sys
 import os
-import requests
-import yaml
 import logging
-import matplotlib.pyplot as plt
 
-# Set up logging for debugging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Reduce logging verbosity from matplotlib
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
-# Update the Python path
+# Add the project root directory to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-# Import the sentiment analysis function
+# Import utility functions
 from src.utils.sentiment_analysis import get_overall_sentiment
+from src.utils.defi_integration import check_yield_and_reinvest
 
-# Load configuration
-config_path = os.path.join(os.path.dirname(__file__), '../../config/config.yaml')
-with open(config_path, 'r') as file:
-    config = yaml.safe_load(file)
-
-# Whale Alert API Setup
-WHALE_ALERT_API_KEY = config['whale_alert']['api_key']
-WHALE_ALERT_API_URL = "https://api.whale-alert.io/v1/transactions"
-
-# Function to check whale transactions
-def check_whale_movements():
-    try:
-        params = {
-            'api_key': WHALE_ALERT_API_KEY,
-            'min_value': 500000,  # Minimum value of transactions to track
-            'limit': 5            # Number of transactions to fetch
-        }
-        response = requests.get(WHALE_ALERT_API_URL, params=params)
-        if response.status_code == 200:
-            transactions = response.json().get("transactions", [])
-            if transactions:
-                logging.debug(f"Fetched {len(transactions)} whale transactions.")
-                return True  # Indicates significant whale activity
-        else:
-            logging.warning(f"Error fetching whale data: {response.status_code}")
-        return False
-    except Exception as e:
-        logging.error(f"Error in whale movement detection: {e}")
-        return False
-
-# Custom data feed
+# Custom data feed class for Backtrader using Pandas data
 class CustomPandasData(bt.feeds.PandasData):
     params = (
         ('datetime', None),
@@ -57,7 +25,7 @@ class CustomPandasData(bt.feeds.PandasData):
         ('volume', 'volume'),
     )
 
-# Enhanced trading strategy with Whale Movement Detector
+# Define the trading strategy
 class EnhancedStrategy(bt.Strategy):
     params = dict(
         rsi_period=14,
@@ -65,7 +33,8 @@ class EnhancedStrategy(bt.Strategy):
         rsi_lower=30,
         atr_period=14,
         atr_multiplier=1.0,
-        sentiment_threshold=-0.2
+        sentiment_threshold=-0.2,
+        reinvest_threshold=100
     )
 
     def __init__(self):
@@ -75,103 +44,98 @@ class EnhancedStrategy(bt.Strategy):
         self.rsi = bt.indicators.RelativeStrengthIndex(self.data.close, period=self.params.rsi_period)
         self.atr = bt.indicators.AverageTrueRange(self.data, period=self.params.atr_period)
         self.trade_log = []
-
-        # Fetch overall sentiment score
         self.overall_sentiment = get_overall_sentiment()
-        logging.debug(f"Initial Overall Sentiment Score: {self.overall_sentiment}")
-
-        # Check whale movements
-        self.whale_activity_detected = check_whale_movements()
-        logging.debug(f"Whale Activity Detected: {self.whale_activity_detected}")
+        self.cumulative_profit = 0
+        logging.debug("Strategy initialized with parameters: %s", self.params)
 
     def log(self, text):
-        """ Logging function for this strategy """
-        print(f'{self.data.datetime.date(0)}: {text}')
-
+        logging.info(f'{self.data.datetime.date(0)}: {text}')
 
     def next(self):
-        # Log the RSI and Close price for each bar
-        self.log(f'RSI: {self.rsi[0]}, Close: {self.dataclose[0]}')
+        self.log(f'RSI: {self.rsi[0]}, Close: {self.dataclose[0]}, Sentiment: {self.overall_sentiment}')
+        logging.debug("Next step - Close: %.2f, RSI: %.2f, Sentiment: %.2f", self.dataclose[0], self.rsi[0], self.overall_sentiment)
 
         if self.order:
-            return  # Skip if there's a pending order
+            logging.debug("Order already placed, skipping iteration.")
+            return
 
+        # Check if there is an open position
         if not self.position:
-            # Buy condition: RSI below lower threshold, positive sentiment, and no whale activity
-            if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold and not self.whale_activity_detected:
+            if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold:
                 self.buy_price = self.dataclose[0]
                 self.order = self.buy()
-                self.trade_log.append(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
+                logging.debug("BUY order placed at %.2f", self.dataclose[0])
         else:
-            # Dynamic stop-loss and take-profit based on ATR
+            # Calculate stop loss and take profit
             stop_loss_price = self.buy_price - (self.params.atr_multiplier * self.atr[0])
             take_profit_price = self.buy_price + (self.params.atr_multiplier * self.atr[0])
 
-            # Sell conditions: Stop-loss, Take-profit, RSI above upper threshold, or whale activity detected
+            logging.debug("Stop Loss: %.2f, Take Profit: %.2f", stop_loss_price, take_profit_price)
+
+            # Check if we should sell
             if self.dataclose[0] <= stop_loss_price:
                 self.order = self.sell()
-                self.trade_log.append(f"SELL (Stop Loss) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"SELL (Stop Loss) at {self.dataclose[0]} with RSI {self.rsi[0]}")
+                logging.debug("Stop loss triggered, SELL order placed at %.2f", self.dataclose[0])
+                self.cumulative_profit += self.dataclose[0] - self.buy_price
+                self.buy_price = None
+            elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper:
+                self.order = self.sell()
+                self.log(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
+                logging.debug("Take profit or RSI overbought, SELL order placed at %.2f", self.dataclose[0])
+                self.cumulative_profit += self.dataclose[0] - self.buy_price
                 self.buy_price = None
 
-            elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper or self.whale_activity_detected:
-                self.order = self.sell()
-                self.trade_log.append(f"SELL (Take Profit, RSI Overbought, or Whale Activity) at {self.dataclose[0]} with RSI {self.rsi[0]}")
-                self.log(f"SELL (Take Profit, RSI Overbought, or Whale Activity) at {self.dataclose[0]} with RSI {self.rsi[0]}")
-                self.buy_price = None
+            # Check for reinvestment
+            if self.cumulative_profit >= self.params.reinvest_threshold:
+                check_yield_and_reinvest()
+                self.log(f"Profit Reinvestment triggered (Cumulative Profit: {self.cumulative_profit:.2f})")
+                logging.debug("Reinvesting profits, cumulative profit reset.")
+                self.cumulative_profit = 0
 
     def stop(self):
-        # Ensure any open position is closed at the end of the backtest
         if self.position:
             self.order = self.sell()
-            self.trade_log.append(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
             self.log(f"FORCED SELL at {self.dataclose[0]} (End of Backtest)")
+            logging.debug("Forced SELL at %.2f due to end of backtest", self.dataclose[0])
 
 # Function to load CSV data
 def load_data(filepath, date_column='timestamp'):
     try:
+        logging.debug("Loading data from %s", filepath)
         data = pd.read_csv(filepath, sep=';', engine='python')
         data.columns = data.columns.str.strip()
         date_column = next((col for col in data.columns if 'timestamp' in col.lower()), date_column)
-
         data[date_column] = pd.to_datetime(data[date_column], errors='coerce')
         data.dropna(subset=[date_column], inplace=True)
         data.set_index(date_column, inplace=True)
-
-        column_mapping = {
-            'open': 'open',
-            'high': 'high',
-            'low': 'low',
-            'close': 'close',
-            'volume': 'volume'
-        }
+        column_mapping = {'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close', 'volume': 'volume'}
         data.rename(columns=column_mapping, inplace=True)
-
+        logging.debug("Data loaded successfully with columns: %s", data.columns)
         return data[['open', 'high', 'low', 'close', 'volume']]
-    except ValueError as e:
+    except Exception as e:
+        logging.error("Error loading data: %s", e)
         print(f"Error: {e}")
-        print(f"Available columns in {filepath}: {pd.read_csv(filepath, sep=';', engine='python').columns}")
         return None
 
-# Function to run backtests
-def run_backtest_with_metrics(data, condition_name, figure_number):
+# Function to run backtests with detailed metrics
+def run_backtest_with_metrics(data, condition_name):
     cerebro = bt.Cerebro()
     cerebro.addstrategy(EnhancedStrategy)
     data_feed = CustomPandasData(dataname=data)
     cerebro.adddata(data_feed, name=condition_name)
-
     cerebro.broker.setcash(10000.0)
-
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
 
-    print(f"\nRunning backtest for {condition_name} market condition.")
+    logging.info(f"Running backtest for {condition_name} market condition.")
     results = cerebro.run()
     final_value = cerebro.broker.getvalue()
-    print(f"Ending Portfolio Value for {condition_name}: {final_value:.2f}")
+    logging.info(f"Ending Portfolio Value for {condition_name}: {final_value:.2f}")
 
+    # Extract metrics
     sharpe_ratio = results[0].analyzers.sharpe.get_analysis().get('sharperatio', 'N/A')
     drawdown = results[0].analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 'N/A')
     trade_analysis = results[0].analyzers.trades.get_analysis()
@@ -181,38 +145,31 @@ def run_backtest_with_metrics(data, condition_name, figure_number):
     pnl_won = trade_analysis.won.pnl.total if 'won' in trade_analysis and 'pnl' in trade_analysis.won else 0
     pnl_lost = trade_analysis.lost.pnl.total if 'lost' in trade_analysis and 'pnl' in trade_analysis.lost else 0
 
+    # Calculate win rate and profit factor
     win_rate = (won_trades / total_closed) * 100 if total_closed > 0 else 0
     profit_factor = (pnl_won / abs(pnl_lost)) if pnl_lost != 0 else float('inf')
 
-    print(f"\nTrade Log:")
-    for entry in results[0].trade_log:
-        print(entry)
+    # Output metrics
+    logging.info(f"Metrics Summary for {condition_name}:")
+    logging.info("Sharpe Ratio: %s", sharpe_ratio)
+    logging.info("Max Drawdown: %s", drawdown)
+    logging.info("Win Rate: %.2f%%", win_rate)
+    logging.info("Profit Factor: %s", profit_factor)
 
-    print(f"\nMetrics Summary for {condition_name}:")
-    print("Sharpe Ratio:", sharpe_ratio)
-    print("Max Drawdown:", drawdown)
-    print("Win Rate: {:.2f}%".format(win_rate))
-    print("Profit Factor:", profit_factor)
+    # Plot backtest results
+    cerebro.plot()
 
-    # Save the plot for the market condition
-    cerebro.plot(figure=figure_number)
+# Main execution
+if __name__ == "__main__":
+    market_conditions = {
+        'Bull Market': 'data/bull_market.csv',
+        'Bear Market': 'data/bear_market.csv',
+        'Sideways Market': 'data/sideways_market.csv'
+    }
 
-# Market conditions
-market_conditions = {
-    'Bull Market': 'data/bull_market.csv',
-    'Bear Market': 'data/bear_market.csv',
-    'Sideways Market': 'data/sideways_market.csv'
-}
-
-# Create a figure for plotting
-plt.figure(figsize=(15, 10))
-
-# Run backtests for each market condition and plot on the same figure
-for i, (condition_name, file_path) in enumerate(market_conditions.items(), start=1):
-    market_data = load_data(file_path)
-    if market_data is not None:
-        run_backtest_with_metrics(market_data, condition_name, figure_number=i)
-    else:
-        print(f"Failed to load data for {condition_name}.")
-
-plt.show()
+    for condition_name, file_path in market_conditions.items():
+        market_data = load_data(file_path)
+        if market_data is not None:
+            run_backtest_with_metrics(market_data, condition_name)
+        else:
+            logging.error(f"Failed to load data for {condition_name}.")

@@ -172,5 +172,4 @@ for i, (condition_name, file_path) in enumerate(market_conditions.items(), start
     else:
         print(f"Failed to load data for {condition_name}.")
 
-# Show all plots together
 plt.show()

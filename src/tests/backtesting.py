@@ -2,14 +2,51 @@ import backtrader as bt
 import pandas as pd
 import sys
 import os
+import requests
+import yaml
+import logging
 import matplotlib.pyplot as plt
 
-# Add the root project directory to the Python path
+# Set up logging for debugging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Update the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 # Import the sentiment analysis function
 from src.utils.sentiment_analysis import get_overall_sentiment
 
+# Load configuration
+config_path = os.path.join(os.path.dirname(__file__), '../../config/config.yaml')
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file)
+
+# Whale Alert API Setup
+WHALE_ALERT_API_KEY = config['whale_alert']['api_key']
+WHALE_ALERT_API_URL = "https://api.whale-alert.io/v1/transactions"
+
+# Function to check whale transactions
+def check_whale_movements():
+    try:
+        params = {
+            'api_key': WHALE_ALERT_API_KEY,
+            'min_value': 500000,  # Minimum value of transactions to track
+            'limit': 5            # Number of transactions to fetch
+        }
+        response = requests.get(WHALE_ALERT_API_URL, params=params)
+        if response.status_code == 200:
+            transactions = response.json().get("transactions", [])
+            if transactions:
+                logging.debug(f"Fetched {len(transactions)} whale transactions.")
+                return True  # Indicates significant whale activity
+        else:
+            logging.warning(f"Error fetching whale data: {response.status_code}")
+        return False
+    except Exception as e:
+        logging.error(f"Error in whale movement detection: {e}")
+        return False
+
+# Custom data feed
 class CustomPandasData(bt.feeds.PandasData):
     params = (
         ('datetime', None),
@@ -20,14 +57,15 @@ class CustomPandasData(bt.feeds.PandasData):
         ('volume', 'volume'),
     )
 
+# Enhanced trading strategy with Whale Movement Detector
 class EnhancedStrategy(bt.Strategy):
     params = dict(
         rsi_period=14,
-        rsi_upper=70,  # Adjusted to be more selective
-        rsi_lower=30,  # Adjusted to be more selective
+        rsi_upper=70,
+        rsi_lower=30,
         atr_period=14,
-        atr_multiplier=1.0,  # Adjusted for better stop-loss/take-profit levels
-        sentiment_threshold=-0.2  # New parameter for sentiment filtering
+        atr_multiplier=1.0,
+        sentiment_threshold=-0.2
     )
 
     def __init__(self):
@@ -40,22 +78,26 @@ class EnhancedStrategy(bt.Strategy):
 
         # Fetch overall sentiment score
         self.overall_sentiment = get_overall_sentiment()
-        print(f"Initial Overall Sentiment Score: {self.overall_sentiment}")
+        logging.debug(f"Initial Overall Sentiment Score: {self.overall_sentiment}")
+
+        # Check whale movements
+        self.whale_activity_detected = check_whale_movements()
+        logging.debug(f"Whale Activity Detected: {self.whale_activity_detected}")
 
     def log(self, text):
         """ Logging function for this strategy """
         print(f'{self.data.datetime.date(0)}: {text}')
 
     def next(self):
-        # Log RSI and Close price for each bar
+        # Log the RSI and Close price for each bar
         self.log(f'RSI: {self.rsi[0]}, Close: {self.dataclose[0]}')
 
         if self.order:
             return  # Skip if there's a pending order
 
         if not self.position:
-            # Buy condition: RSI below lower threshold and positive sentiment score
-            if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold:
+            # Buy condition: RSI below lower threshold, positive sentiment, and no whale activity
+            if self.rsi[0] < self.params.rsi_lower and self.overall_sentiment > self.params.sentiment_threshold and not self.whale_activity_detected:
                 self.buy_price = self.dataclose[0]
                 self.order = self.buy()
                 self.trade_log.append(f"BUY at {self.dataclose[0]} with RSI {self.rsi[0]}")
@@ -65,17 +107,17 @@ class EnhancedStrategy(bt.Strategy):
             stop_loss_price = self.buy_price - (self.params.atr_multiplier * self.atr[0])
             take_profit_price = self.buy_price + (self.params.atr_multiplier * self.atr[0])
 
-            # Sell conditions: Stop-loss, Take-profit, or RSI above upper threshold
+            # Sell conditions: Stop-loss, Take-profit, RSI above upper threshold, or whale activity detected
             if self.dataclose[0] <= stop_loss_price:
                 self.order = self.sell()
                 self.trade_log.append(f"SELL (Stop Loss) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.log(f"SELL (Stop Loss) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.buy_price = None
 
-            elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper:
+            elif self.dataclose[0] >= take_profit_price or self.rsi[0] > self.params.rsi_upper or self.whale_activity_detected:
                 self.order = self.sell()
-                self.trade_log.append(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
-                self.log(f"SELL (Take Profit or RSI Overbought) at {self.dataclose[0]} with RSI {self.rsi[0]}")
+                self.trade_log.append(f"SELL (Take Profit, RSI Overbought, or Whale Activity) at {self.dataclose[0]} with RSI {self.rsi[0]}")
+                self.log(f"SELL (Take Profit, RSI Overbought, or Whale Activity) at {self.dataclose[0]} with RSI {self.rsi[0]}")
                 self.buy_price = None
 
     def stop(self):

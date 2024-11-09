@@ -88,6 +88,7 @@ class EnhancedStrategy(bt.Strategy):
         """ Logging function for this strategy """
         print(f'{self.data.datetime.date(0)}: {text}')
 
+
     def next(self):
         # Log the RSI and Close price for each bar
         self.log(f'RSI: {self.rsi[0]}, Close: {self.dataclose[0]}')

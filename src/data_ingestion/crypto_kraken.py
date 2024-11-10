@@ -2,12 +2,14 @@ import ccxt
 import yaml
 import pandas as pd
 
+# Load API keys from config
 with open("config/config.yaml", 'r') as f:
     config = yaml.safe_load(f)
 
 KRAKEN_API_KEY = config['kraken']['api_key']
 KRAKEN_SECRET_KEY = config['kraken']['secret_key']
 
+# Initialize Kraken API
 kraken = ccxt.kraken({
     'apiKey': KRAKEN_API_KEY,
     'secret': KRAKEN_SECRET_KEY,
@@ -30,7 +32,6 @@ def fetch_crypto_data(symbol):
         # Save to CSV
         df.to_csv(f"data/crypto/{symbol.replace('/', '_')}_data.csv", index=False)
         print(f"Crypto data for {symbol} saved to data/crypto/")
-
 
     except Exception as e:
         print(f"Error fetching data for {symbol}: {e}")
